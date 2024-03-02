@@ -2,6 +2,7 @@
 name: WRT-CORE
 
 on:
+  #公用核心标识
   workflow_call:
     inputs:
       WRT_BRANCH:
@@ -54,10 +55,10 @@ jobs:
   wrt_core:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Projects
+      - name: 检验结束  Checkout Projects
         uses: actions/checkout@main
 
-      - name: Free Disk Space
+      - name: 可用磁盘空间  Free Disk Space
         uses: endersonmenezes/free-disk-space@main
         with:
           remove_android: true
@@ -75,7 +76,7 @@ jobs:
             /var/lib/mysql* /var/log/azure*"
           testing: false
 
-      - name: Initialization Environment
+      - name: 初始化编译环境  Initialization Environment
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
@@ -89,7 +90,7 @@ jobs:
           sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
 
-      - name: Initialization Values
+      - name: 初始化数值  Initialization Values
         run: |
           export WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d_%H.%M.%S")
           export WRT_REPO=$(basename $GITHUB_WORKSPACE)
@@ -101,17 +102,17 @@ jobs:
           echo "WRT_SOURCE=$WRT_SOURCE" >> $GITHUB_ENV
           echo "WRT_TYPE=$WRT_TYPE" >> $GITHUB_ENV
 
-      - name: Clone Code
+      - name: 下载固件源码  Clone Code
         run: |
           git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_URL ./wrt/
 
           cd ./wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
-      - name: Check Scripts
+      - name: 检查脚本  Check Scripts
         run: |
           find ./ -maxdepth 2 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
 
-      - name: Check Caches
+      - name: 检查缓存  Check Caches
         if: env.WRT_CFG == 'false'
         id: check-cache
         uses: actions/cache@main
@@ -122,7 +123,7 @@ jobs:
             ./wrt/staging_dir/host*
             ./wrt/staging_dir/tool*
 
-      - name: Update Caches
+      - name: 更新缓存  Update Caches
         if: env.WRT_CFG == 'false'
         run: |
           if ${{steps.check-cache.outputs.cache-hit == 'true'}}; then
@@ -141,21 +142,27 @@ jobs:
             echo "caches cleanup done!"
           fi
 
-      - name: Update Feeds
+      - name: 加载自定义源  Load custom feeds
+        run: |
+          cd ./wrt/
+          echo 'src-git 281677160 https://github.com/281677160/openwrt-package' >> feeds.conf.default
+          echo 'src-git haiibo https://github.com/haiibo/openwrt-packages' >> feeds.conf.default
+          
+      - name: 更新源  Update Feeds
         run: |
           cd ./wrt/
 
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Custom Packages
+      - name: 定制软件包  Custom Packages
         run: |
           cd ./wrt/package/
 
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
 
-      - name: Custom Settings
+      - name: 自定义设置  Custom Settings
         run: |
           cd ./wrt/
 
@@ -167,21 +174,21 @@ jobs:
 
           make defconfig
 
-      - name: Download Packages
+      - name: 下载软件包  Download Packages
         if: env.WRT_CFG == 'false'
         run: |
           cd ./wrt/
 
           make download -j$(nproc)
 
-      - name: Compile Firmware
+      - name: 编译固件  Compile Firmware
         if: env.WRT_CFG == 'false'
         run: |
           cd ./wrt/
 
           make -j$(nproc) || make -j1 V=s
 
-      - name: Machine Information
+      - name: 设备信息  Machine Information
         run: |
           cd ./wrt/
 
@@ -193,7 +200,7 @@ jobs:
           du -h --max-depth=1
           echo "======================="
 
-      - name: Package Firmware
+      - name: 封装固件  Package Firmware
         run: |
           cd ./wrt/ && mkdir ./upload/
 
@@ -212,7 +219,7 @@ jobs:
             done
           fi
 
-      - name: Release Firmware
+      - name: 发布固件  Release Firmware
         uses: softprops/action-gh-release@master
         with:
           tag_name: ${{env.WRT_TARGET}}_${{env.WRT_SOURCE}}_${{env.WRT_DATE}}
