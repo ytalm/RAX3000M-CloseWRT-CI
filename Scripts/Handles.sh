@@ -1,91 +1,60 @@
 #!/bin/bash
 
-#修改Tiny Filemanager汉化
-if [ -d *"tinyfilemanager"* ]; then
-	PO_FILE="./luci-app-tinyfilemanager/po/zh_Hans/tinyfilemanager.po"
-	sed -i '/msgid "Tiny File Manager"/{n; s/msgstr.*/msgstr "文件管理器"/}' $PO_FILE
-	sed -i 's/启用用户验证/用户验证/g;s/家目录/初始目录/g;s/Favicon 路径/收藏夹图标路径/g' $PO_FILE
-
-	echo "tinyfilemanager date has been updated!"
-fi
+PKG_PATH="$GITHUB_WORKSPACE/wrt/package/"
 
 #预置HomeProxy数据
 if [ -d *"homeproxy"* ]; then
-	HP_PATCH="../homeproxy/root/etc/homeproxy/resources"
+	HP_RULE="surge"
+	HP_PATH="homeproxy/root/etc/homeproxy"
 
-	UPDATE_RESOURCES() {
-		local RES_TYPE=$1
-		local RES_REPO=$(echo "$2" | tr '[:upper:]' '[:lower:]')
-		local RES_BRANCH=$3
-		local RES_FILE=$4
-		local RES_EXT=${4##*.}
-		local RES_DEPTH=${5:-1}
+	rm -rf ./$HP_PATH/resources/*
 
-		git clone -q --depth=$RES_DEPTH --single-branch --branch $RES_BRANCH "https://github.com/$RES_REPO.git" ./$RES_TYPE/
+	git clone -q --depth=1 --single-branch --branch "release" "https://github.com/Loyalsoldier/surge-rules.git" ./$HP_RULE/
+	cd ./$HP_RULE/ && RES_VER=$(git log -1 --pretty=format:'%s' | grep -o "[0-9]*")
 
-		cd ./$RES_TYPE/
+	echo $RES_VER | tee china_ip4.ver china_ip6.ver china_list.ver gfw_list.ver
+	awk -F, '/^IP-CIDR,/{print $2 > "china_ip4.txt"} /^IP-CIDR6,/{print $2 > "china_ip6.txt"}' cncidr.txt
+	sed 's/^\.//g' direct.txt > china_list.txt ; sed 's/^\.//g' gfw.txt > gfw_list.txt
+	mv -f ./{china_*,gfw_list}.{ver,txt} ../$HP_PATH/resources/
 
-		if [[ $RES_EXT == "txt" ]]; then
-			echo $(git log -1 --pretty=format:'%s' -- $RES_FILE | grep -o "[0-9]*") > "$RES_TYPE".ver
-			mv -f $RES_FILE "$RES_TYPE"."$RES_EXT"
-		elif [[ $RES_EXT == "zip" ]]; then
-			local REPO_ID=$(echo -n "$RES_REPO" | md5sum | cut -d ' ' -f 1)
-			local REPO_VER=$(git log -1 --pretty=format:'%s' | cut -d ' ' -f 1)
-			echo "{ \"$REPO_ID\": { \"repo\": \"$(echo $RES_REPO | sed 's/\//\\\//g')\", \"version\": \"$REPO_VER\" } }" > "$RES_TYPE".ver
-			curl -sfL -O "https://github.com/$RES_REPO/archive/$RES_FILE"
-			mv -f $RES_FILE $HP_PATCH/"${RES_REPO//\//_}"."$RES_EXT"
-		elif [[ $RES_EXT == "db" ]]; then
-			local RES_VER=$(git tag | tail -n 1)
-			echo $RES_VER > "$RES_TYPE".ver
-			curl -sfL -O "https://github.com/$RES_REPO/releases/download/$RES_VER/$RES_FILE"
-		fi
+	cd .. && rm -rf ./$HP_RULE/
 
-		cp -f "$RES_TYPE".* $HP_PATCH/
-		chmod +x $HP_PATCH/*
-
-		cd .. && rm -rf ./$RES_TYPE/
-	}
-
-	UPDATE_RESOURCES "china_ip4" "1715173329/IPCIDR-CHINA" "master" "ipv4.txt" "5"
-	UPDATE_RESOURCES "china_ip6" "1715173329/IPCIDR-CHINA" "master" "ipv6.txt" "5"
-	UPDATE_RESOURCES "gfw_list" "Loyalsoldier/v2ray-rules-dat" "release" "gfw.txt"
-	UPDATE_RESOURCES "china_list" "Loyalsoldier/v2ray-rules-dat" "release" "direct-list.txt"
-	#UPDATE_RESOURCES "geoip" "1715173329/sing-geoip" "master" "geoip.db"
-	#UPDATE_RESOURCES "geosite" "1715173329/sing-geosite" "master" "geosite.db"
-	#UPDATE_RESOURCES "clash_dashboard" "MetaCubeX/metacubexd" "gh-pages" "gh-pages.zip"
-
-	echo "homeproxy date has been updated!"
+	cd $PKG_PATH && echo "homeproxy date has been updated!"
 fi
 
-#预置OpenClash内核和数据
-if [ -d *"OpenClash"* ]; then
-	CORE_VER="https://raw.githubusercontent.com/vernesong/OpenClash/core/dev/core_version"
-	CORE_TYPE=$(echo $WRT_TARGET | egrep -iq "64|86" && echo "amd64" || echo "arm64")
-	CORE_TUN_VER=$(curl -sfL $CORE_VER | sed -n "2{s/\r$//;p;q}")
+#修改argon主题字体和颜色
+if [ -d *"luci-theme-argon"* ]; then
+	cd ./luci-theme-argon/
 
-	CORE_DEV="https://github.com/vernesong/OpenClash/raw/core/dev/dev/clash-linux-$CORE_TYPE.tar.gz"
-	CORE_MATE="https://github.com/vernesong/OpenClash/raw/core/dev/meta/clash-linux-$CORE_TYPE.tar.gz"
-	CORE_TUN="https://github.com/vernesong/OpenClash/raw/core/dev/premium/clash-linux-$CORE_TYPE-$CORE_TUN_VER.gz"
+	sed -i '/font-weight:/ {/normal\|!important/! s/\(font-weight:\s*\)[^;]*;/\1normal;/}' $(find ./luci-theme-argon -type f -iname "*.css")
+	sed -i "s/#5e72e4/#31a1a1/; s/#483d8b/#31a1a1/; s/'0.2'/'0.5'/; s/'none'/'bing'/" ./luci-app-argon-config/root/etc/config/argon
 
-	GEO_MMDB="https://github.com/alecthw/mmdb_china_ip_list/raw/release/lite/Country.mmdb"
-	GEO_SITE="https://github.com/Loyalsoldier/v2ray-rules-dat/raw/release/geosite.dat"
-	GEO_IP="https://github.com/Loyalsoldier/v2ray-rules-dat/raw/release/geoip.dat"
-	GEO_META="https://github.com/MetaCubeX/meta-rules-dat/raw/release/geoip.metadb"
+	cd $PKG_PATH && echo "theme-argon has been fixed!"
+fi
 
-	cd ./OpenClash/luci-app-openclash/root/etc/openclash/
+#移除Shadowsocks组件
+PW_FILE=$(find ./ -maxdepth 3 -type f -wholename "*/luci-app-passwall/Makefile")
+if [ -f "$PW_FILE" ]; then
+	sed -i '/config PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Libev/,/x86_64/d' $PW_FILE
+	sed -i '/config PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR/,/default n/d' $PW_FILE
+	sed -i '/Shadowsocks_NONE/d; /Shadowsocks_Libev/d; /ShadowsocksR/d' $PW_FILE
 
-	curl -sfL -o Country.mmdb $GEO_MMDB
-	curl -sfL -o GeoSite.dat $GEO_SITE
-	curl -sfL -o GeoIP.dat $GEO_IP
-	curl -sfL -o GeoIP.metadb $GEO_META
+	cd $PKG_PATH && echo "passwall has been fixed!"
+fi
 
-	mkdir ./core/ && cd ./core/
+SP_FILE=$(find ./ -maxdepth 3 -type f -wholename "*/luci-app-ssr-plus/Makefile")
+if [ -f "$SP_FILE" ]; then
+	sed -i '/default PACKAGE_$(PKG_NAME)_INCLUDE_Shadowsocks_Libev/,/libev/d' $SP_FILE
+	sed -i '/config PACKAGE_$(PKG_NAME)_INCLUDE_ShadowsocksR/,/x86_64/d' $SP_FILE
+	sed -i '/Shadowsocks_NONE/d; /Shadowsocks_Libev/d; /ShadowsocksR/d' $SP_FILE
 
-	curl -sfL -o meta.tar.gz $CORE_MATE && tar -zxf meta.tar.gz && mv -f clash clash_meta
-	curl -sfL -o tun.gz $CORE_TUN && gzip -d tun.gz && mv -f tun clash_tun
-	curl -sfL -o dev.tar.gz $CORE_DEV && tar -zxf dev.tar.gz
+	cd $PKG_PATH && echo "ssr-plus has been fixed!"
+fi
 
-	chmod +x ./clash* && rm -rf ./*.gz
+#修复TailScale配置文件冲突
+TS_FILE=$(find ../feeds/packages/ -maxdepth 3 -type f -wholename "*/tailscale/Makefile")
+if [ -f "$TS_FILE" ]; then
+	sed -i '/\/files/d' $TS_FILE
 
-	echo "openclash date has been updated!"
+	cd $PKG_PATH && echo "tailscale has been fixed!"
 fi
