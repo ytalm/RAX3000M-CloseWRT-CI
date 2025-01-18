@@ -8,7 +8,7 @@ PADAVANONLY源码：
 https://github.com/padavanonly/immortalwrt-mt798x
 
 PADAVANONLY-23.05源码：
-https://github.com/padavanonly/immortalwrt-mt798x-23.05.git
+https://github.com/padavanonly/immortalwrt-mt798x-23.05
 
 # 固件简要说明：
 
@@ -20,8 +20,6 @@ MEDIATEK系列，配套的UBOOT：
 https://github.com/VIKINGYFY/UBOOT-CI/releases
 
 # 目录简要说明：
-
-Depends.txt——环境依赖列表
 
 workflows——自定义CI配置
 
