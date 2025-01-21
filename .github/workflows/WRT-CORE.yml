@@ -180,6 +180,8 @@ jobs:
         run: |
           cd ./wrt/
 
+          rm -rf ./tmp* ./.config*
+
           cat $GITHUB_WORKSPACE/Config/$WRT_TARGET.txt $GITHUB_WORKSPACE/Config/General.txt $GITHUB_WORKSPACE/Config/Package.txt >> .config
 
           $GITHUB_WORKSPACE/Scripts/Settings.sh
