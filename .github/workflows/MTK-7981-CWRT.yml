@@ -3,9 +3,9 @@ name: MTK-7981-CWRT
 
 #CI计划
 on:
-  #自动编译：每周早上6点
+  #自动编译：每月28日国际时间4点，北京时间中午12点执行(北京+8)
   schedule:
-    - cron: 0 22 * * 0
+    - cron: 0 4 28 * *
   #手动编译
   workflow_dispatch:
     inputs:
@@ -66,13 +66,13 @@ jobs:
       #默认主题
       WRT_THEME: argon
       #默认主机名
-      WRT_NAME: CWRT
+      WRT_NAME: OPENWRT
       #默认WIFI名称
-      WRT_SSID: CWRT
+      WRT_SSID: OPENWRT
       #默认WIFI密码
-      WRT_WORD: 12345678
+      WRT_WORD:
       #默认地址
-      WRT_IP: 192.168.10.1
+      WRT_IP: 172.16.10.1
       #默认密码，仅作提示，修改无用
       WRT_PW: 无
       #源码链接
