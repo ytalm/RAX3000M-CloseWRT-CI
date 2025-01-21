@@ -3,9 +3,9 @@ name: MTK-7981-CWRT
 
 #CI计划
 on:
-  #自动编译：每月28日国际时间4点，北京时间中午12点执行(北京+8)
+  #自动编译：每周早上6点
   schedule:
-    - cron: 0 4 28 * *
+    - cron: 0 22 * * 0
   #手动编译
   workflow_dispatch:
     inputs:
