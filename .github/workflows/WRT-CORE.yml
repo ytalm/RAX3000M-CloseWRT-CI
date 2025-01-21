@@ -155,6 +155,12 @@ jobs:
             echo "caches cleanup done!"
           fi
 
+      - name: 加载自定义源  Load custom feeds
+        run: |
+          cd ./wrt/
+          echo 'src-git 281677160 https://github.com/281677160/openwrt-package' >> feeds.conf.default
+          echo 'src-git haiibo https://github.com/haiibo/openwrt-packages' >> feeds.conf.default
+
       - name: Update Feeds
         run: |
           cd ./wrt/
