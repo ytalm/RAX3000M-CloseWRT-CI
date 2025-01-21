@@ -2,6 +2,7 @@
 name: WRT-CORE
 
 on:
+#公用核心标识
   workflow_call:
     inputs:
       WRT_TARGET:
@@ -63,10 +64,10 @@ jobs:
     name: ${{inputs.WRT_SOURCE}}
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout Projects
+      - name: 检验结束   Checkout Projects
         uses: actions/checkout@main
 
-      - name: Free Disk Space
+      - name: 可用磁盘空间   Free Disk Space
         uses: FirelightFlagboy/gh-runner-free-disk-space@main
         with:
           android: true
@@ -77,7 +78,7 @@ jobs:
           swap-storage: true
           tool-cache: true
 
-      - name: Initialization Environment
+      - name: 初始化编译环境   Initialization Environment
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
@@ -91,7 +92,7 @@ jobs:
           sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
 
-      - name: Initialization Values
+      - name: 初始化数值   Initialization Values
         run: |
           export WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d_%H.%M.%S")
           export WRT_CI=$(basename $GITHUB_WORKSPACE)
@@ -103,7 +104,7 @@ jobs:
           echo "WRT_VER=$WRT_VER" >> $GITHUB_ENV
           echo "WRT_TYPE=$WRT_TYPE" >> $GITHUB_ENV
 
-      - name: Clone Code
+      - name: 下载固件源码   Clone Code
         run: |
           git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO ./wrt/
 
@@ -115,11 +116,11 @@ jobs:
             sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
           fi
 
-      - name: Check Scripts
+      - name: 检查脚本   Check Scripts
         run: |
           find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
 
-      - name: Check Caches
+      - name: 检查缓存   Check Caches
         id: check-cache
         if: env.WRT_TEST != 'true'
         uses: actions/cache@main
@@ -131,7 +132,7 @@ jobs:
             ./wrt/staging_dir/host*
             ./wrt/staging_dir/tool*
 
-      - name: Update Caches
+      - name: 更新缓存   Update Caches
         if: env.WRT_TEST != 'true'
         run: |
           if [ -d "./wrt/staging_dir" ]; then
@@ -161,21 +162,21 @@ jobs:
           echo 'src-git 281677160 https://github.com/281677160/openwrt-package' >> feeds.conf.default
           echo 'src-git haiibo https://github.com/haiibo/openwrt-packages' >> feeds.conf.default
 
-      - name: Update Feeds
+      - name: 更新源  Update Feeds
         run: |
           cd ./wrt/
 
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Custom Packages
+      - name: 定制软件包  Custom Packages
         run: |
           cd ./wrt/package/
 
           $GITHUB_WORKSPACE/Scripts/Packages.sh
           $GITHUB_WORKSPACE/Scripts/Handles.sh
 
-      - name: Custom Settings
+      - name: 自定义设置  Custom Settings
         run: |
           cd ./wrt/
 
@@ -185,21 +186,21 @@ jobs:
 
           make defconfig -j$(nproc)
 
-      - name: Download Packages
+      - name: 下载软件包  Download Packages
         if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
 
           make download -j$(nproc)
 
-      - name: Compile Firmware
+      - name: 编译固件  Compile Firmware
         if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
 
           make -j$(nproc) || make -j1 V=s
 
-      - name: Machine Information
+      - name: 设备信息  Machine Information
         run: |
           cd ./wrt/
 
@@ -211,7 +212,7 @@ jobs:
           du -h --max-depth=1
           echo "======================="
 
-      - name: Package Firmware
+      - name: 封装固件  Package Firmware
         run: |
           cd ./wrt/ && mkdir ./upload/
 
@@ -236,7 +237,7 @@ jobs:
 
           echo "WRT_KVER=${KVER:-none}" >> $GITHUB_ENV
 
-      - name: Release Firmware
+      - name: 发布固件  Release Firmware
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{env.WRT_TARGET}}_${{env.WRT_VER}}_${{env.WRT_DATE}}
