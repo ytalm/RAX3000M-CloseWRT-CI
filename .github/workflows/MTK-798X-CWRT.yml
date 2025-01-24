@@ -9,6 +9,13 @@ on:
   #手动编译
   workflow_dispatch:
     inputs:
+      Tempoary_IP:
+        description: '固件 IP 地址 [可选]'
+        default: ''
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'false'
       ADJUST:
         description: '内存低占用模式，默认关闭。'
         default: 'false'
